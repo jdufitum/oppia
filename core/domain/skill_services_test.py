@@ -435,6 +435,36 @@ class SkillServicesUnitTests(test_utils.GenericTestBase):
         self.assertEqual(augmented_skill_summaries[0].id, self.SKILL_ID)
         self.assertEqual(augmented_skill_summaries[1].id, self.SKILL_ID2)
 
+    def test_filter_skills_by_status_unassigned_with_assigned_skills(self) -> None:
+        self.save_new_skill(
+            self.SKILL_ID2, self.USER_ID, description='Description2',
+            prerequisite_skill_ids=['skill_id_1', 'skill_id_2'])
+
+        topic_id = topic_fetchers.get_new_topic_id()
+        self.save_new_topic(
+            topic_id, self.USER_ID, name='topic1',
+            abbreviated_name='topic-one', url_fragment='topic-one',
+            description='Description',
+            canonical_story_ids=[],
+            additional_story_ids=[],
+            uncategorized_skill_ids=[self.SKILL_ID], # skill id (1) already saved
+            subtopics=[], next_subtopic_id=1)
+
+        self.save_new_valid_classroom(
+            topic_id_to_prerequisite_topic_ids={
+                topic_id: []
+            }
+        )
+
+        augmented_skill_summaries, next_cursor, more = (
+            skill_services.get_filtered_skill_summaries(
+                self.num_queries_to_fetch, 'Unassigned', None, [],
+                None, None))
+        self.assertEqual(len(augmented_skill_summaries), 1)
+        self.assertEqual(augmented_skill_summaries[0].id, self.SKILL_ID2)
+        self.assertEqual(next_cursor, None)
+        self.assertFalse(more)
+        
     def test_cursor_behaves_correctly_when_fetching_skills_in_batches(
         self
     ) -> None:
